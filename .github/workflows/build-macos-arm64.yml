@@ -1,0 +1,50 @@
+name: Build OpenXRay macOS ARM64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: macOS ARM64 Release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Verify runner architecture
+        run: |
+          uname -m
+          test "$(uname -m)" = "arm64"
+
+      - name: Install dependencies
+        run: |
+          brew install cmake sdl2 lzo libogg libvorbis \
+            theora openal-soft jpeg-turbo
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_UNITY_BUILD=ON \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DCPACK_GENERATOR=ZIP
+
+      - name: Compile
+        run: |
+          cmake --build build \
+            --config Release \
+            --parallel 3
+
+      - name: Package
+        working-directory: build
+        run: cpack -B artifacts -C Release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenXRay-macOS-arm64-Release
+          path: build/artifacts/openxray*.*
